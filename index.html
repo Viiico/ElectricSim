@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="author" content="Wiktor Kwiatkowski, Jakub Ryszko" />
+    <title>Electric Field Simulation</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Exo+2:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+      :root {
+        --primary: #00e6ff;
+        --secondary: #ff2a6d;
+        --accent: #05d9e8;
+        --dark-bg: #0a0e17;
+        --panel-bg: rgba(15, 22, 36, 0.85);
+        --panel-border: rgba(0, 230, 255, 0.2);
+        --text-primary: #d0f4ff;
+        --text-secondary: #a8d0e6;
+      }
+      body {
+        background: radial-gradient(circle at center, #0a0e17, #050811);
+        color: var(--text-primary);
+        font-family: "Exo 2", sans-serif;
+        height: 100vh;
+        overflow: hidden;
+        position: relative;
+      }
+      
+      /* Particle Background */
+      #particles-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;}
+
+      /* HEADER - Preserved from Sigma Fluid */
+      #header {
+        position: absolute; top: 0; left: 0; width: 100%; padding: 20px 40px;
+        display: flex; justify-content: space-between; align-items: center; z-index: 10;
+      }
+      #logo {
+        font-family: "Orbitron", sans-serif; font-size: 2.2rem; font-weight: 700; letter-spacing: 3px;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 15px rgba(0, 230, 255, 0.3);
+        position: relative;
+      }
+      #credits { display: flex; align-items: center; gap: 25px; font-size: 1.1rem; color: var(--text-secondary); }
+      .credit-name { font-weight: 400; transition: all 0.3s; }
+      .credit-name:hover { color: var(--primary); text-shadow: 0 0 10px rgba(0, 230, 255, 0.5); }
+      .github-link { color: var(--text-secondary); font-size: 1.8rem; transition: all 0.3s; display: flex; align-items: center; }
+      .github-link:hover { color: var(--primary); transform: scale(1.1); }
+
+      /* LAYOUT */
+      #container { display: flex; width: 100%; height: 100vh; padding-top: 80px; }
+      #simulation-area {
+        flex: 1; height: calc(100vh - 80px); position: relative; overflow: hidden;
+        border-radius: 20px 0 0 20px; box-shadow: 0 0 50px rgba(0, 230, 255, 0.1);
+      }
+      #canvas { width: 100%; height: 100%; background: radial-gradient(circle at center, #000000, #000000); }
+
+      /* CONTROL PANEL */
+      #control-panel {
+        width: 360px; height: calc(100vh - 80px); background: var(--panel-bg);
+        backdrop-filter: blur(10px); padding: 25px 20px;
+        box-shadow: -5px 0 50px rgba(0, 0, 0, 0.5); border-left: 1px solid var(--panel-border);
+        overflow-y: auto; z-index: 5;
+      }
+      .panel-header { display: flex; justify-content: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid var(--panel-border); }
+      .panel-title { font-family: "Orbitron", sans-serif; font-size: 1.4rem; color: var(--primary); letter-spacing: 1px; }
+
+      .control-group {
+        margin-bottom: 30px; padding: 20px; background: rgba(8, 15, 30, 0.5);
+        border-radius: 15px; border: 1px solid var(--panel-border); position: relative; overflow: hidden;
+        transition: transform 0.3s;
+      }
+      .control-group:hover { transform: translateY(-2px); }
+      .group-title { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; font-family: "Exo 2", sans-serif; font-weight: 600; color: var(--primary); }
+      
+      .control-item { margin-bottom: 22px; }
+      .control-label { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; color: var(--text-secondary); }
+      .value-display { background: rgba(0, 230, 255, 0.1); color: var(--primary); padding: 3px 10px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; }
+
+      /* SLIDERS */
+      .slider-container { position: relative; height: 30px; display: flex; align-items: center; }
+      input[type="range"] {
+        -webkit-appearance: none; width: 100%; height: 6px;
+        background: linear-gradient(90deg, var(--secondary), var(--primary));
+        border-radius: 10px; outline: none;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none; width: 22px; height: 22px; background: var(--text-primary);
+        border: 2px solid var(--primary); border-radius: 50%; cursor: pointer; transition: 0.3s;
+      }
+      input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); background: var(--primary); }
+
+      /* BUTTONS */
+      .btn-group { display: flex; gap: 15px; margin-top: 15px; }
+      .btn {
+        flex: 1; padding: 12px; border: none; border-radius: 12px; font-family: "Exo 2", sans-serif;
+        font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;
+        color: var(--text-primary); transition: 0.3s;
+      }
+      .btn:hover { transform: translateY(-3px); box-shadow: 0 5px 20px rgba(0, 230, 255, 0.2); }
+      
+      .btn-primary { background: rgba(0, 230, 255, 0.15); border: 1px solid var(--primary); }
+      .btn-danger { background: rgba(255, 42, 109, 0.15); border: 1px solid var(--secondary); }
+      .btn-success { background: rgba(0, 255, 136, 0.15); border: 1px solid #00ff88; color: #ccffdd; }
+
+    </style>
+  </head>
+  <body>
+    <div id="particles-bg"></div>
+
+    <header id="header">
+      <div id="logo">Sigma Electric Field</div>
+      <div id="credits">
+        <span class="credit-name">Wiktor Kwiatkowski</span>
+        <span class="credit-name">Jakub Ryszko</span>
+        <a href="https://github.com/Viiico" target="_blank" class="github-link">
+          <i class="fab fa-github"></i>
+        </a>
+      </div>
+    </header>
+
+    <div id="container">
+      <div id="simulation-area">
+        <canvas id="canvas"></canvas>
+      </div>
+
+      <div id="control-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">CONTROL PANEL</h2>
+        </div>
+
+        <div class="control-group">
+          <h3 class="group-title"><i class="fas fa-power-off"></i> SIMULATION</h3>
+          
+          <div class="btn-group">
+            <button id="toggleSimBtn" class="btn btn-success">
+              <i class="fas fa-play"></i> <span id="toggleText">Start</span>
+            </button>
+            <button id="resetBtn" class="btn btn-danger">
+              <i class="fas fa-trash"></i> Clear
+            </button>
+          </div>
+
+          <div class="control-item" style="margin-top: 25px;">
+             <div class="control-label">
+              <span><i class="fas fa-tachometer-alt"></i> Simulation Speed</span>
+              <span class="value-display" id="speed-value">3.0x</span>
+            </div>
+            <div class="slider-container">
+              <input type="range" id="speedSlider" min="0" max="3" step="0.1" value="1.0" />
+            </div>
+          </div>
+
+          <div class="control-item" style="margin-top: 15px;">
+            <div class="control-label">
+                <span><i class="fas fa-mouse-pointer"></i> Controls</span>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
+                <span style="color:var(--secondary)">RMB</span> to add (+)<br>
+                <span style="color:#0040ff">LMB</span> to add (-)
+            </div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h3 class="group-title"><i class="fas fa-bolt"></i> CHARGE SETTINGS</h3>
+
+          <div class="control-item">
+            <div class="control-label">
+              <span><i class="fas fa-atom"></i> Charge Magnitude (|q|)</span>
+              <span class="value-display" id="charge-value">20000</span>
+            </div>
+            <div class="slider-container">
+              <input
+                type="range"
+                id="chargeSlider"
+                min="1000"
+                max="100000"
+                step="1000"
+                value="20000"
+              />
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+      function createParticles() {
+        const container = document.getElementById("particles-bg");
+        const particleCount = 250;
+
+        for (let i = 0; i < particleCount; i++) {
+          const particle = document.createElement("div");
+          particle.style.position = "absolute";
+          particle.style.width = Math.random() * 3 + 1 + "px";
+          particle.style.height = particle.style.width;
+          particle.style.background = `rgba(${Math.random() * 100 + 155}, ${
+            Math.random() * 100 + 155
+          }, 255, ${Math.random() * 0.4 + 0.1})`;
+          particle.style.borderRadius = "50%";
+          particle.style.left = Math.random() * 100 + "%";
+          particle.style.top = Math.random() * 10 + "%";
+          particle.style.boxShadow = "0 0 10px rgba(0, 230, 255, 0.5)";
+          container.appendChild(particle);
+          animateBgParticle(particle);
+        }
+      }
+
+      function animateBgParticle(particle) {
+        let x = parseFloat(particle.style.left);
+        let y = parseFloat(particle.style.top);
+        let xSpeed = (Math.random() - 0.5) * 0.25;
+        let ySpeed = (Math.random() - 0.5) * 1;
+
+        function move() {
+          x += xSpeed;
+          y += ySpeed;
+          if (x <= 0 || x >= 100) xSpeed *= -1;
+          if (y <= 10 || y >= 100) ySpeed *= -1;
+          particle.style.left = x + "%";
+          particle.style.top = y + "%";
+          requestAnimationFrame(move);
+        }
+        move();
+      }
+      document.addEventListener("DOMContentLoaded", createParticles);
+    </script>
+  </body>
+</html>
